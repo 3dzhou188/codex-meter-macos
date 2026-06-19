@@ -97,7 +97,7 @@ public final class CodexAppServerClient: UsageProvider, @unchecked Sendable {
         _ = try await request(
             method: "initialize",
             params: [
-                "clientInfo": ["name": "codex-usage-menu", "version": "1.0.1"],
+                "clientInfo": ["name": "codex-usage-menu", "version": "1.1.0"],
                 "capabilities": ["experimentalApi": true],
             ]
         )

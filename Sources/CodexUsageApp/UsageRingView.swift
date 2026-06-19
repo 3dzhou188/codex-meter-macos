@@ -2,18 +2,46 @@ import AppKit
 import CodexUsageCore
 import SwiftUI
 
+// The Agent lamp uses a red/yellow/green status-light language inspired by
+// Agent Signal Bar: https://github.com/guan-ops/Agent-Signal-Bar
+// Rendering is implemented from scratch for Codex Meter's menu bar icon.
 enum StatusItemImageFactory {
-    private static let imageSize = NSSize(width: 76, height: 22)
+    private static let usageImageSize = NSSize(width: 76, height: 22)
+    private static let agentImageSize = NSSize(width: 34, height: 22)
+    private static let combinedImageSize = NSSize(width: 111, height: 22)
     private static let segmentCount = 16
 
-    static func make(snapshot: UsageSnapshot?) -> NSImage {
+    static func make(
+        usage: UsageSnapshot?,
+        agent: AgentStatusSnapshot,
+        mode: StatusDisplayMode,
+        tick: Int
+    ) -> NSImage {
+        let imageSize = size(for: mode)
         let image = NSImage(size: imageSize, flipped: false) { _ in
-            drawMeter(label: "5h", percent: snapshot?.primary?.remainingPercent, originX: 0)
-            drawMeter(label: "7d", percent: snapshot?.secondary?.remainingPercent, originX: 39)
+            switch mode {
+            case .usageAndAgent:
+                drawMeter(label: "5h", percent: usage?.primary?.remainingPercent, originX: 0)
+                drawMeter(label: "7d", percent: usage?.secondary?.remainingPercent, originX: 39)
+                drawAgentLamp(signal: agent.aggregate, originX: 80, tick: tick)
+            case .usageOnly:
+                drawMeter(label: "5h", percent: usage?.primary?.remainingPercent, originX: 0)
+                drawMeter(label: "7d", percent: usage?.secondary?.remainingPercent, originX: 39)
+            case .agentOnly:
+                drawAgentLamp(signal: agent.aggregate, originX: 3, tick: tick)
+            }
             return true
         }
         image.isTemplate = false
         return image
+    }
+
+    private static func size(for mode: StatusDisplayMode) -> NSSize {
+        switch mode {
+        case .usageAndAgent: combinedImageSize
+        case .usageOnly: usageImageSize
+        case .agentOnly: agentImageSize
+        }
     }
 
     private static func drawMeter(label: String, percent: Int?, originX: CGFloat) {
@@ -51,6 +79,29 @@ enum StatusItemImageFactory {
             at: NSPoint(x: center.x - textSize.width / 2, y: center.y - textSize.height / 2),
             withAttributes: numberAttributes
         )
+    }
+
+    private static func drawAgentLamp(signal: AgentSignal, originX: CGFloat, tick: Int) {
+        let colors: [(AgentLampColor, NSColor)] = [
+            (.red, NSColor(red: 0.85, green: 0.20, blue: 0.18, alpha: 1)),
+            (.yellow, NSColor(red: 0.94, green: 0.68, blue: 0.12, alpha: 1)),
+            (.green, NSColor(red: 0.12, green: 0.72, blue: 0.30, alpha: 1)),
+        ]
+        for (index, entry) in colors.enumerated() {
+            let rect = NSRect(x: originX + CGFloat(index) * 9.5, y: 7.4, width: 7.4, height: 7.4)
+            let base = NSBezierPath(ovalIn: rect.insetBy(dx: -1.2, dy: -1.2))
+            NSColor.secondaryLabelColor.withAlphaComponent(0.18).setFill()
+            base.fill()
+
+            let intensity = AgentLampIntensity.value(color: entry.0, signal: signal, tick: tick)
+            guard intensity > 0 else {
+                NSColor.secondaryLabelColor.withAlphaComponent(0.35).setFill()
+                NSBezierPath(ovalIn: rect).fill()
+                continue
+            }
+            entry.1.withAlphaComponent(0.28 + 0.72 * intensity).setFill()
+            NSBezierPath(ovalIn: rect).fill()
+        }
     }
 }
 

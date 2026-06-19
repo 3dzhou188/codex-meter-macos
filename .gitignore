@@ -4,6 +4,7 @@ dist/
 .swiftpm/
 .superpowers/
 .codex/
+Resources/AppIcon.iconset/
 
 # Local environment and signing material
 .env

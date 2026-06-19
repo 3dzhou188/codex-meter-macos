@@ -1,0 +1,12 @@
+Codex Meter
+
+Codex Meter's Codex Agent status light feature is inspired by Agent Signal Bar:
+
+  https://github.com/guan-ops/Agent-Signal-Bar
+
+Agent Signal Bar is an Apache-2.0 licensed local-first macOS signal-light app
+for AI agents. Copyright 2026 XiongYang Guan.
+
+The Codex Meter integration is a Codex-only reimplementation for this project.
+It does not bundle Agent Signal Bar images, sounds, icons, screenshots, brand
+assets, or app resources.

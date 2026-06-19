@@ -12,7 +12,18 @@ struct StatusImageProbe {
             source: .appServer,
             updatedAt: Date()
         )
-        let image = StatusItemImageFactory.make(snapshot: snapshot)
+        let agent = AgentStatusSnapshot(
+            aggregate: .working,
+            sessions: [],
+            updatedAt: Date(),
+            stateFileURL: URL(fileURLWithPath: "/tmp/agent-status.json")
+        )
+        let image = StatusItemImageFactory.make(
+            usage: snapshot,
+            agent: agent,
+            mode: .usageAndAgent,
+            tick: 0
+        )
         guard let tiff = image.tiffRepresentation,
               let bitmap = NSBitmapImageRep(data: tiff),
               let png = bitmap.representation(using: .png, properties: [:])

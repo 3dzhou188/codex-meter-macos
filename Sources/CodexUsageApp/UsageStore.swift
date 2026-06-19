@@ -7,14 +7,21 @@ import UserNotifications
 @MainActor
 final class UsageStore: ObservableObject {
     @Published private(set) var snapshot: UsageSnapshot?
+    @Published private(set) var agentSnapshot = AgentStatusSnapshot.idle(stateFileURL: AgentStatusStore.defaultStateFileURL())
     @Published private(set) var isRefreshing = false
     @Published private(set) var errorMessage: String?
+    @Published private(set) var animationTick = 0
     @Published var launchAtLogin = false
+    @Published var agentMonitoringEnabled = true
+    @Published var statusDisplayMode: StatusDisplayMode = .usageAndAgent
 
     private let appServer = CodexAppServerClient()
+    private let agentStateStore = AgentStatusStore()
+    private let agentActivityProvider = CodexDesktopActivityProvider()
     private var appServerSnapshot: UsageSnapshot?
     private var notificationState = NotificationThresholdState()
     private var tasks: [Task<Void, Never>] = []
+    private var appliedDesktopActivityKeys = Set<String>()
 
     var isStale: Bool {
         snapshot.map { UsageMerger.isStale($0) } ?? false
@@ -24,6 +31,7 @@ final class UsageStore: ObservableObject {
         guard tasks.isEmpty else { return }
         configurePushUpdates()
         configureLaunchAtLogin()
+        configureAgentPreferences()
         requestNotificationPermission()
 
         tasks.append(Task { [weak self] in
@@ -31,6 +39,21 @@ final class UsageStore: ObservableObject {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(300))
                 await self?.refreshOnline()
+            }
+        })
+
+        tasks.append(Task { [weak self] in
+            await self?.refreshAgentStatus()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                await self?.refreshAgentStatus()
+            }
+        })
+
+        tasks.append(Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                await MainActor.run { self?.advanceAgentAnimation() }
             }
         })
     }
@@ -43,6 +66,7 @@ final class UsageStore: ObservableObject {
 
     func refreshAll() async {
         await refreshOnline()
+        await refreshAgentStatus()
     }
 
     func refreshOnline() async {
@@ -74,6 +98,27 @@ final class UsageStore: ObservableObject {
         }
     }
 
+    func setAgentMonitoringEnabled(_ enabled: Bool) {
+        agentMonitoringEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: "agentMonitoringEnabled")
+        if enabled {
+            Task { await refreshAgentStatus() }
+        } else {
+            agentSnapshot = AgentStatusSnapshot(
+                aggregate: .paused,
+                sessions: [],
+                recentEvents: agentSnapshot.recentEvents,
+                updatedAt: Date(),
+                stateFileURL: agentStateStore.stateFileURL
+            )
+        }
+    }
+
+    func setStatusDisplayMode(_ mode: StatusDisplayMode) {
+        statusDisplayMode = mode
+        UserDefaults.standard.set(mode.rawValue, forKey: "statusDisplayMode")
+    }
+
     private func configurePushUpdates() {
         appServer.setSnapshotHandler { [weak self] snapshot in
             Task { @MainActor in self?.accept(snapshot) }
@@ -91,6 +136,22 @@ final class UsageStore: ObservableObject {
         }
     }
 
+    private func configureAgentPreferences() {
+        let monitoringKey = "agentMonitoringEnabled"
+        if UserDefaults.standard.object(forKey: monitoringKey) == nil {
+            UserDefaults.standard.set(true, forKey: monitoringKey)
+        }
+        agentMonitoringEnabled = UserDefaults.standard.bool(forKey: monitoringKey)
+
+        if let rawMode = UserDefaults.standard.string(forKey: "statusDisplayMode"),
+           let mode = StatusDisplayMode(rawValue: rawMode) {
+            statusDisplayMode = mode
+        } else {
+            statusDisplayMode = .usageAndAgent
+            UserDefaults.standard.set(statusDisplayMode.rawValue, forKey: "statusDisplayMode")
+        }
+    }
+
     private func requestNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
@@ -101,6 +162,39 @@ final class UsageStore: ObservableObject {
         case .failure(let error):
             errorMessage = "实时服务连接失败：\(error.localizedDescription)"
         }
+    }
+
+    private func refreshAgentStatus() async {
+        guard agentMonitoringEnabled else { return }
+        let activities = await Task.detached { [agentActivityProvider] in
+            agentActivityProvider.recentActivities()
+        }.value
+
+        do {
+            for activity in activities {
+                let key = "\(activity.sessionID)|\(activity.updatedAt.timeIntervalSince1970)|\(activity.signal.rawValue)|\(activity.event ?? "")"
+                guard !appliedDesktopActivityKeys.contains(key) else { continue }
+                try agentStateStore.apply(activity)
+                appliedDesktopActivityKeys.insert(key)
+            }
+            if appliedDesktopActivityKeys.count > 1_000 {
+                appliedDesktopActivityKeys.removeAll(keepingCapacity: true)
+            }
+            agentSnapshot = try agentStateStore.readSnapshot()
+        } catch {
+            agentSnapshot = AgentStatusSnapshot(
+                aggregate: .stale,
+                sessions: [],
+                recentEvents: agentSnapshot.recentEvents,
+                updatedAt: Date(),
+                stateFileURL: agentStateStore.stateFileURL
+            )
+            errorMessage = "Agent 状态读取失败：\(error.localizedDescription)"
+        }
+    }
+
+    private func advanceAgentAnimation() {
+        animationTick = (animationTick + 1) % 10_000
     }
 
     private func accept(_ newSnapshot: UsageSnapshot) {

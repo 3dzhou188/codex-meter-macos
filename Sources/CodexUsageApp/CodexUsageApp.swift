@@ -22,7 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
 
-        let item = NSStatusBar.system.statusItem(withLength: 84)
+        let item = NSStatusBar.system.statusItem(withLength: 119)
         statusItem = item
         if let button = item.button {
             button.imagePosition = .imageOnly
@@ -34,15 +34,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         popover.behavior = .transient
         popover.animates = true
-        popover.contentSize = NSSize(width: 330, height: 520)
+        popover.contentSize = NSSize(width: 360, height: 680)
         popover.contentViewController = NSHostingController(rootView: UsageMenuView(store: store))
 
-        store.$snapshot
+        Publishers.CombineLatest4(
+            store.$snapshot,
+            store.$agentSnapshot,
+            store.$statusDisplayMode,
+            store.$animationTick
+        )
             .receive(on: RunLoop.main)
-            .sink { [weak self] snapshot in self?.updateStatusImage(snapshot) }
+            .sink { [weak self] usage, agent, mode, tick in
+                self?.updateStatusImage(usage: usage, agent: agent, mode: mode, tick: tick)
+            }
             .store(in: &cancellables)
 
-        updateStatusImage(nil)
+        updateStatusImage(
+            usage: nil,
+            agent: store.agentSnapshot,
+            mode: store.statusDisplayMode,
+            tick: store.animationTick
+        )
         store.start()
     }
 
@@ -60,10 +72,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func updateStatusImage(_ snapshot: UsageSnapshot?) {
+    private func updateStatusImage(
+        usage: UsageSnapshot?,
+        agent: AgentStatusSnapshot,
+        mode: StatusDisplayMode,
+        tick: Int
+    ) {
         guard let button = statusItem?.button else { return }
-        button.image = StatusItemImageFactory.make(snapshot: snapshot)
-        let description = "Codex 5 小时：\(snapshot?.primary?.remainingPercent.description ?? "--")%，7 天：\(snapshot?.secondary?.remainingPercent.description ?? "--")%"
+        let image = StatusItemImageFactory.make(usage: usage, agent: agent, mode: mode, tick: tick)
+        statusItem?.length = image.size.width + 8
+        button.image = image
+        let description = "Codex 5 小时：\(usage?.primary?.remainingPercent.description ?? "--")%，7 天：\(usage?.secondary?.remainingPercent.description ?? "--")%，Agent：\(agent.aggregate.displayName)"
         button.toolTip = description
         button.setAccessibilityLabel(description)
     }

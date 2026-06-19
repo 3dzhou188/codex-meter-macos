@@ -1,0 +1,19 @@
+#!/bin/bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [[ -x "$ROOT/dist/Codex Meter.app/Contents/Resources/codex-meter-agent" ]]; then
+  exec "$ROOT/dist/Codex Meter.app/Contents/Resources/codex-meter-agent" codex-hook "$@"
+fi
+
+if [[ -x "$ROOT/.build/release/codex-meter-agent" ]]; then
+  exec "$ROOT/.build/release/codex-meter-agent" codex-hook "$@"
+fi
+
+if [[ -x "$ROOT/.build/debug/codex-meter-agent" ]]; then
+  exec "$ROOT/.build/debug/codex-meter-agent" codex-hook "$@"
+fi
+
+echo "codex-meter-agent is not built yet. Run ./scripts/build-app.sh or swift build --product codex-meter-agent." >&2
+exit 1

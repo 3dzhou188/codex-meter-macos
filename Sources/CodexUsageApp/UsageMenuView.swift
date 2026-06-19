@@ -24,8 +24,11 @@ struct UsageMenuView: View {
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                    .padding(.vertical, 12)
             }
+
+            Divider()
+            AgentStatusSection(store: store)
 
             if let error = store.errorMessage, store.snapshot != nil {
                 Label(error, systemImage: "exclamationmark.triangle")
@@ -59,8 +62,8 @@ struct UsageMenuView: View {
             }
         }
         .padding(16)
-        .frame(width: 330)
-        .onAppear { Task { await store.refreshOnline() } }
+        .frame(width: 360)
+        .onAppear { Task { await store.refreshAll() } }
     }
 
     @ViewBuilder
@@ -76,6 +79,104 @@ struct UsageMenuView: View {
             }
         }
         .font(.caption)
+    }
+}
+
+private struct AgentStatusSection: View {
+    @ObservedObject var store: UsageStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack {
+                Label("Codex Agent 状态", systemImage: "trafficlight")
+                    .font(.headline)
+                Spacer()
+                Text(store.agentSnapshot.aggregate.displayName)
+                    .font(.headline)
+                    .foregroundStyle(color)
+            }
+
+            LabeledContent("建议", value: store.agentSnapshot.aggregate.displayState.actionText)
+                .font(.caption)
+            LabeledContent("最后更新", value: lastUpdatedText)
+                .font(.caption)
+            Text(store.agentSnapshot.aggregate.summary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if !store.agentSnapshot.sessions.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("活跃 session").font(.caption.bold())
+                    ForEach(store.agentSnapshot.sessions.prefix(3)) { session in
+                        HStack {
+                            Text(shortSessionID(session.sessionID))
+                                .font(.caption.monospaced())
+                            Text(session.signal.displayName)
+                                .font(.caption)
+                            Spacer()
+                            Text(session.updatedAt.formatted(date: .omitted, time: .shortened))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
+            if !store.agentSnapshot.recentEvents.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("最近事件").font(.caption.bold())
+                    ForEach(store.agentSnapshot.recentEvents.prefix(3)) { event in
+                        HStack {
+                            Text(event.signal.displayName)
+                                .font(.caption)
+                            Text(event.event ?? shortSessionID(event.sessionID))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            Spacer()
+                        }
+                    }
+                }
+            }
+
+            Toggle("Codex Desktop 监控", isOn: Binding(
+                get: { store.agentMonitoringEnabled },
+                set: { store.setAgentMonitoringEnabled($0) }
+            ))
+
+            Picker("状态栏显示", selection: Binding(
+                get: { store.statusDisplayMode },
+                set: { store.setStatusDisplayMode($0) }
+            )) {
+                ForEach(StatusDisplayMode.allCases) { mode in
+                    Text(mode.displayName).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
+    private var color: Color {
+        switch store.agentSnapshot.aggregate.displayState {
+        case .permission, .blocked:
+            return .red
+        case .needsReview, .stale:
+            return .yellow
+        case .paused:
+            return .secondary
+        case .ready, .active, .completed:
+            return .green
+        }
+    }
+
+    private var lastUpdatedText: String {
+        guard let updatedAt = store.agentSnapshot.updatedAt else { return "尚无状态" }
+        return updatedAt.formatted(date: .omitted, time: .standard)
+    }
+
+    private func shortSessionID(_ id: String) -> String {
+        if id.count <= 10 { return id }
+        return "\(id.prefix(6))…\(id.suffix(3))"
     }
 }
 
