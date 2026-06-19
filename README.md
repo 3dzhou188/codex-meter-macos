@@ -4,9 +4,13 @@
 
 > An unofficial, native macOS menu bar app for monitoring Codex usage limits and Codex Agent activity.
 
+![Codex Meter usage quota and Agent status overview](docs/codex-meter-overview.png)
+
 ## 中文
 
 Codex Meter 是一款轻量的原生 macOS 菜单栏应用，用两个彩色分段圆环实时显示 Codex **5 小时额度**和 **7 天额度**的剩余百分比，并用三色状态灯展示 Codex Agent 当前活动状态。
+
+示意图展示了额度圆环的颜色阈值，以及 Codex Agent 在空闲、思考、工作、需查看、等待授权、阻塞和状态不可信等场景下的红绿灯状态。
 
 ### 功能
 
@@ -82,6 +86,8 @@ Codex Agent 状态灯功能参考并受启发于 [Agent Signal Bar](https://gith
 ## English
 
 Codex Meter is a lightweight native macOS menu bar app that displays the remaining percentage of your Codex **5-hour** and **7-day** usage windows with two segmented, color-coded rings, plus a traffic-light status indicator for Codex Agent activity.
+
+The overview image shows the quota-ring color thresholds and the Codex Agent traffic-light states for ready, thinking, working, attention, permission, blocked, and stale activity.
 
 ### Features
 
