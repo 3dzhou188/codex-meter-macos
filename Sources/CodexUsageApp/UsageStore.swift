@@ -152,7 +152,7 @@ final class UsageStore: ObservableObject {
         }
     }
 
-    private func requestNotificationPermission() {
+    private nonisolated func requestNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
@@ -225,12 +225,20 @@ final class UsageStore: ObservableObject {
             content.title = "Codex \(name)不足"
             content.body = "剩余 \(window.remainingPercent)%（已低于 \(threshold)%）"
             content.sound = .default
-            UNUserNotificationCenter.current().add(
-                UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
-            ) { error in
-                if error == nil {
-                    UserDefaults.standard.set(true, forKey: preferenceKey)
-                }
+            deliverNotification(identifier: identifier, preferenceKey: preferenceKey, content: content)
+        }
+    }
+
+    private nonisolated func deliverNotification(
+        identifier: String,
+        preferenceKey: String,
+        content: UNMutableNotificationContent
+    ) {
+        UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
+        ) { error in
+            if error == nil {
+                UserDefaults.standard.set(true, forKey: preferenceKey)
             }
         }
     }
