@@ -9,7 +9,7 @@ on:
       tag:
         description: Existing version tag to publish
         required: true
-        default: v2.0.1
+        default: v2.0.0
 
 permissions:
   contents: write
@@ -37,7 +37,7 @@ jobs:
           cat > /tmp/release-notes.md <<'NOTES'
           ## 中文
 
-          Codex Meter 2.0.1 修复了首次启动时通知权限回调可能导致应用崩溃、菜单栏不显示的问题。
+          Codex Meter 2.0.0 修复版解决了首次启动时通知权限回调可能导致应用崩溃、菜单栏不显示的问题。
 
           Codex Meter 2.0 增加 Codex Agent 状态灯，可在菜单栏显示额度与 Agent 活动状态，并支持“额度 + Agent”“仅额度”“仅 Agent”三种显示模式。
 
@@ -56,7 +56,7 @@ jobs:
 
           ## English
 
-          Codex Meter 2.0.1 fixes a startup crash where the notification permission callback could prevent the menu bar item from appearing.
+          Codex Meter 2.0.0 fixed build resolves a startup crash where the notification permission callback could prevent the menu bar item from appearing.
 
           Codex Meter 2.0 adds the Codex Agent status light, showing usage limits and Agent activity in the macOS menu bar, with display modes for usage + Agent, usage only, and Agent only.
 
