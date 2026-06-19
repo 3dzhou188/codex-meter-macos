@@ -9,7 +9,7 @@ on:
       tag:
         description: Existing version tag to publish
         required: true
-        default: v1.0.1
+        default: v2.0.0
 
 permissions:
   contents: write
@@ -37,13 +37,21 @@ jobs:
           cat > /tmp/release-notes.md <<'NOTES'
           ## 中文
 
-          此版本移除了本地会话文件读取。Codex Meter 现在仅通过 Codex 实时服务获取 5 小时和 7 天额度数据。
+          Codex Meter 2.0 增加 Codex Agent 状态灯，可在菜单栏显示额度与 Agent 活动状态，并支持“额度 + Agent”“仅额度”“仅 Agent”三种显示模式。
+
+          额度数据仍只来自 Codex 实时服务；`~/.codex/sessions` 仅用于读取 Codex 活动事件，明确忽略 `token_count`，不会读取 `~/.codex/auth.json`。
+
+          Codex Agent 状态灯功能参考并受启发于 [Agent Signal Bar](https://github.com/guan-ops/Agent-Signal-Bar) 的本地优先 AI Agent 三色信号灯设计。Codex Meter 中的实现限定为 Codex 场景，并按本项目代码结构重新实现；不包含 Agent Signal Bar 的图片、声音、图标、截图、品牌素材或应用资源。
 
           下载 ZIP，解压后将应用移入“应用程序”文件夹。首次运行可能需要右键应用并选择“打开”。
 
           ## English
 
-          This release removes local session file access. Codex Meter now obtains 5-hour and 7-day usage data exclusively from the Codex real-time service.
+          Codex Meter 2.0 adds the Codex Agent status light, showing usage limits and Agent activity in the macOS menu bar, with display modes for usage + Agent, usage only, and Agent only.
+
+          Usage data still comes only from the Codex realtime service. `~/.codex/sessions` is read only for Codex activity events, `token_count` is explicitly ignored, and `~/.codex/auth.json` is not read.
+
+          The Codex Agent status light feature is inspired by [Agent Signal Bar](https://github.com/guan-ops/Agent-Signal-Bar) and its local-first red/yellow/green signal-light design for AI agents. Codex Meter's implementation is scoped to Codex and reimplemented in this project's own structure; it does not include Agent Signal Bar images, sounds, icons, screenshots, brand assets, or app resources.
 
           Download the ZIP, extract it, and move the app to Applications. On first launch, you may need to right-click the app and choose **Open**.
           NOTES
