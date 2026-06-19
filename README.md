@@ -36,6 +36,14 @@ Codex Meter 是一款轻量的原生 macOS 菜单栏应用，用两个彩色分�
 从 GitHub Releases 下载最新版本，解压后将 `Codex Meter.app` 移入“应用程序”文件夹。
 
 当前发布包采用临时签名，首次打开时可能需要在 Finder 中右键应用并选择“打开”。
+如果 macOS 仍提示“无法打开”或“已损坏”，请执行：
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Codex Meter.app"
+open "/Applications/Codex Meter.app"
+```
+
+这是因为当前开源发布包尚未使用 Apple Developer ID 签名并公证。
 
 ### 从源码构建
 
@@ -113,6 +121,14 @@ The overview image shows the quota-ring color thresholds and the Codex Agent tra
 Download the latest archive from GitHub Releases, extract it, and move `Codex Meter.app` to your Applications folder.
 
 Release builds are currently ad-hoc signed. On first launch, you may need to right-click the app in Finder and choose **Open**.
+If macOS still says the app cannot be opened or is damaged, run:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Codex Meter.app"
+open "/Applications/Codex Meter.app"
+```
+
+This is required because the current open-source release is not yet signed with an Apple Developer ID certificate and notarized.
 
 ### Build From Source
 

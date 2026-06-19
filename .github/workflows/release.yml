@@ -43,7 +43,14 @@ jobs:
 
           Codex Agent 状态灯功能参考并受启发于 [Agent Signal Bar](https://github.com/guan-ops/Agent-Signal-Bar) 的本地优先 AI Agent 三色信号灯设计。Codex Meter 中的实现限定为 Codex 场景，并按本项目代码结构重新实现；不包含 Agent Signal Bar 的图片、声音、图标、截图、品牌素材或应用资源。
 
-          下载 ZIP，解压后将应用移入“应用程序”文件夹。首次运行可能需要右键应用并选择“打开”。
+          下载 ZIP，解压后将应用移入“应用程序”文件夹。当前发布包采用临时签名，首次运行可能需要右键应用并选择“打开”。如果 macOS 仍提示“无法打开”或“已损坏”，可执行：
+
+          ```bash
+          xattr -dr com.apple.quarantine "/Applications/Codex Meter.app"
+          open "/Applications/Codex Meter.app"
+          ```
+
+          这是因为当前开源发布包尚未使用 Apple Developer ID 签名并公证。
 
           ## English
 
@@ -53,7 +60,14 @@ jobs:
 
           The Codex Agent status light feature is inspired by [Agent Signal Bar](https://github.com/guan-ops/Agent-Signal-Bar) and its local-first red/yellow/green signal-light design for AI agents. Codex Meter's implementation is scoped to Codex and reimplemented in this project's own structure; it does not include Agent Signal Bar images, sounds, icons, screenshots, brand assets, or app resources.
 
-          Download the ZIP, extract it, and move the app to Applications. On first launch, you may need to right-click the app and choose **Open**.
+          Download the ZIP, extract it, and move the app to Applications. Release builds are currently ad-hoc signed. On first launch, you may need to right-click the app and choose **Open**. If macOS still says the app cannot be opened or is damaged, run:
+
+          ```bash
+          xattr -dr com.apple.quarantine "/Applications/Codex Meter.app"
+          open "/Applications/Codex Meter.app"
+          ```
+
+          This is required because the current open-source release is not yet signed with an Apple Developer ID certificate and notarized.
           NOTES
       - name: Publish GitHub release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
