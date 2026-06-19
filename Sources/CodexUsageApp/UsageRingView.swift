@@ -82,24 +82,19 @@ enum StatusItemImageFactory {
     }
 
     private static func drawAgentLamp(signal: AgentSignal, originX: CGFloat, tick: Int) {
-        let colors: [(AgentLampColor, NSColor)] = [
-            (.red, NSColor(red: 0.85, green: 0.20, blue: 0.18, alpha: 1)),
-            (.yellow, NSColor(red: 0.94, green: 0.68, blue: 0.12, alpha: 1)),
-            (.green, NSColor(red: 0.12, green: 0.72, blue: 0.30, alpha: 1)),
-        ]
-        for (index, entry) in colors.enumerated() {
+        for (index, color) in AgentLampColor.displayOrder.enumerated() {
             let rect = NSRect(x: originX + CGFloat(index) * 9.5, y: 7.4, width: 7.4, height: 7.4)
             let base = NSBezierPath(ovalIn: rect.insetBy(dx: -1.2, dy: -1.2))
             NSColor.secondaryLabelColor.withAlphaComponent(0.18).setFill()
             base.fill()
 
-            let intensity = AgentLampIntensity.value(color: entry.0, signal: signal, tick: tick)
+            let intensity = AgentLampIntensity.value(color: color, signal: signal, tick: tick)
             guard intensity > 0 else {
                 NSColor.secondaryLabelColor.withAlphaComponent(0.35).setFill()
                 NSBezierPath(ovalIn: rect).fill()
                 continue
             }
-            entry.1.withAlphaComponent(0.28 + 0.72 * intensity).setFill()
+            NSColor(color).withAlphaComponent(0.28 + 0.72 * intensity).setFill()
             NSBezierPath(ovalIn: rect).fill()
         }
     }
@@ -112,6 +107,14 @@ extension Color {
 }
 
 private extension NSColor {
+    convenience init(_ color: AgentLampColor) {
+        switch color {
+        case .red: self.init(red: 0.85, green: 0.20, blue: 0.18, alpha: 1)
+        case .yellow: self.init(red: 0.94, green: 0.68, blue: 0.12, alpha: 1)
+        case .green: self.init(red: 0.12, green: 0.72, blue: 0.30, alpha: 1)
+        }
+    }
+
     convenience init(_ level: UsageLevel) {
         switch level {
         case .high: self.init(red: 0.09, green: 0.53, blue: 0.23, alpha: 1)

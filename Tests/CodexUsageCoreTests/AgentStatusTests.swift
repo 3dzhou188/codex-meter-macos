@@ -141,12 +141,31 @@ import Testing
 }
 
 @Test func agentLampIntensityMatchesSignalColors() {
+    #expect(AgentLampColor.displayOrder == [.red, .yellow, .green])
     #expect(AgentLampIntensity.value(color: .green, signal: .idle, tick: 0) == 1.0)
     #expect(AgentLampIntensity.value(color: .yellow, signal: .attention, tick: 0) == 1.0)
     #expect(AgentLampIntensity.value(color: .yellow, signal: .attention, tick: 1) < 1.0)
     #expect(AgentLampIntensity.value(color: .red, signal: .permissionRequest, tick: 0) == 1.0)
     #expect(AgentLampIntensity.value(color: .red, signal: .permissionRequest, tick: 1) < 0.1)
     #expect(AgentLampIntensity.value(color: .green, signal: .paused, tick: 0) == 0)
+}
+
+@Test func agentLampStatesMatchReadmeOverview() {
+    func activeColors(for signal: AgentSignal, tick: Int = 0) -> [AgentLampColor] {
+        AgentLampColor.displayOrder.filter {
+            AgentLampIntensity.value(color: $0, signal: signal, tick: tick) > 0
+        }
+    }
+
+    #expect(activeColors(for: .idle) == [.green])
+    #expect(activeColors(for: .thinking) == [.green])
+    #expect(activeColors(for: .working) == [.green])
+    #expect(activeColors(for: .done) == [.green])
+    #expect(activeColors(for: .attention) == [.yellow])
+    #expect(activeColors(for: .stale) == [.yellow])
+    #expect(activeColors(for: .permissionRequest) == [.red])
+    #expect(activeColors(for: .blocked) == [.red])
+    #expect(activeColors(for: .paused).isEmpty)
 }
 
 @Test func corruptedAgentStateFileReadsAsStale() throws {

@@ -222,10 +222,12 @@ public struct AgentStatusSnapshot: Equatable, Sendable {
     }
 }
 
-public enum AgentLampColor: Sendable {
+public enum AgentLampColor: Sendable, CaseIterable, Equatable {
     case red
     case yellow
     case green
+
+    public static let displayOrder: [AgentLampColor] = [.red, .yellow, .green]
 }
 
 public enum AgentLampIntensity {
