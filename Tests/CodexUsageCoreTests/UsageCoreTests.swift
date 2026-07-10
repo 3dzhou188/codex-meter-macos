@@ -2,6 +2,13 @@ import Foundation
 import Testing
 @testable import CodexUsageCore
 
+@Test func executableDiscoverySupportsRenamedChatGPTApp() {
+    #expect(CodexAppServerClient.codexExecutableCandidates.first ==
+        "/Applications/ChatGPT.app/Contents/Resources/codex")
+    #expect(CodexAppServerClient.codexExecutableCandidates.contains(
+        "/Applications/Codex.app/Contents/Resources/codex"))
+}
+
 @Test func usageSourceOnlySupportsRealtimeAppServer() {
     #expect(UsageSource.allCases == [.appServer])
 }

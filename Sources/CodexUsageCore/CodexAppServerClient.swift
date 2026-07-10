@@ -97,7 +97,7 @@ public final class CodexAppServerClient: UsageProvider, @unchecked Sendable {
         _ = try await request(
             method: "initialize",
             params: [
-                "clientInfo": ["name": "codex-usage-menu", "version": "2.0.0"],
+                "clientInfo": ["name": "codex-usage-menu", "version": "3.0.0"],
                 "capabilities": ["experimentalApi": true],
             ]
         )
@@ -190,12 +190,17 @@ public final class CodexAppServerClient: UsageProvider, @unchecked Sendable {
         continuations.forEach { $0.resume(throwing: ClientError.disconnected) }
     }
 
-    private static func findCodexExecutable() throws -> URL {
-        let candidates = [
+    static var codexExecutableCandidates: [String] {
+        [
+            "/Applications/ChatGPT.app/Contents/Resources/codex",
             "/Applications/Codex.app/Contents/Resources/codex",
             "/opt/homebrew/bin/codex",
             "/usr/local/bin/codex",
         ]
+    }
+
+    private static func findCodexExecutable() throws -> URL {
+        let candidates = codexExecutableCandidates
         if let path = candidates.first(where: FileManager.default.isExecutableFile(atPath:)) {
             return URL(fileURLWithPath: path)
         }

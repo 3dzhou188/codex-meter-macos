@@ -92,9 +92,13 @@ final class UsageStore: ObservableObject {
     }
 
     func openCodex() {
-        let url = URL(fileURLWithPath: "/Applications/Codex.app")
-        if !NSWorkspace.shared.open(url) {
-            errorMessage = "无法打开 /Applications/Codex.app"
+        let applications = ["/Applications/ChatGPT.app", "/Applications/Codex.app"]
+        guard let path = applications.first(where: FileManager.default.fileExists(atPath:)) else {
+            errorMessage = "未找到 ChatGPT 或 Codex 应用"
+            return
+        }
+        if !NSWorkspace.shared.open(URL(fileURLWithPath: path)) {
+            errorMessage = "无法打开 \(path)"
         }
     }
 

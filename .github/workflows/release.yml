@@ -9,7 +9,7 @@ on:
       tag:
         description: Existing version tag to publish
         required: true
-        default: v2.0.0
+        default: v3.0.0
 
 permissions:
   contents: write
@@ -37,9 +37,11 @@ jobs:
           cat > /tmp/release-notes.md <<'NOTES'
           ## 中文
 
-          Codex Meter 2.0.0 修复版解决了首次启动时通知权限回调可能导致应用崩溃、菜单栏不显示的问题。
+          Codex Meter 3.0.0 兼容新版 ChatGPT 桌面应用。OpenAI 将 Codex 桌面应用整合并更名为 ChatGPT 后，本版本可从 `/Applications/ChatGPT.app` 自动发现内置 Codex 实时服务，同时继续兼容旧版 Codex.app 和 Homebrew Codex CLI。
 
-          Codex Meter 2.0 增加 Codex Agent 状态灯，可在菜单栏显示额度与 Agent 活动状态，并支持“额度 + Agent”“仅额度”“仅 Agent”三种显示模式。
+          “打开 Codex”操作也会优先打开 ChatGPT，并在未安装新版应用时回退到旧版 Codex。
+
+          本版本还重新设计了应用图标，采用单层米色 macOS 圆角底板，保留终端、额度弧线和三色状态灯三个核心元素。
 
           额度数据仍只来自 Codex 实时服务；`~/.codex/sessions` 仅用于读取 Codex 活动事件，明确忽略 `token_count`，不会读取 `~/.codex/auth.json`。
 
@@ -56,9 +58,11 @@ jobs:
 
           ## English
 
-          Codex Meter 2.0.0 fixed build resolves a startup crash where the notification permission callback could prevent the menu bar item from appearing.
+          Codex Meter 3.0.0 supports the renamed ChatGPT desktop app. After OpenAI integrated the Codex desktop experience into ChatGPT, this release can discover the bundled Codex realtime service at `/Applications/ChatGPT.app`, while retaining compatibility with the legacy Codex.app and Homebrew Codex CLI installations.
 
-          Codex Meter 2.0 adds the Codex Agent status light, showing usage limits and Agent activity in the macOS menu bar, with display modes for usage + Agent, usage only, and Agent only.
+          The “Open Codex” action now opens ChatGPT first and falls back to the legacy Codex app when needed.
+
+          This release also introduces a redesigned app icon with a single warm ivory macOS-style rounded tile while preserving the terminal mark, usage arc, and traffic-light status indicators.
 
           Usage data still comes only from the Codex realtime service. `~/.codex/sessions` is read only for Codex activity events, `token_count` is explicitly ignored, and `~/.codex/auth.json` is not read.
 
