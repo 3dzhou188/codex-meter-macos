@@ -69,6 +69,36 @@ public struct UsageSnapshot: Equatable, Sendable {
     }
 
     public var hasUsage: Bool { primary != nil || secondary != nil }
+
+    public var fiveHourWindow: UsageWindow? {
+        window(exactMinutes: 300) ?? fallbackPrimaryWindow(excludingMinutes: 10_080)
+    }
+
+    public var sevenDayWindow: UsageWindow? {
+        window(exactMinutes: 10_080) ?? fallbackSecondaryWindow()
+    }
+
+    public var isFiveHourLimitTemporarilyUnlimited: Bool {
+        fiveHourWindow == nil && sevenDayWindow != nil
+    }
+
+    private var windows: [UsageWindow] {
+        [primary, secondary].compactMap { $0 }
+    }
+
+    private func window(exactMinutes minutes: Int) -> UsageWindow? {
+        windows.first { $0.windowMinutes == minutes }
+    }
+
+    private func fallbackPrimaryWindow(excludingMinutes minutes: Int) -> UsageWindow? {
+        guard let primary, primary.windowMinutes != minutes else { return nil }
+        return primary.windowMinutes == nil ? primary : nil
+    }
+
+    private func fallbackSecondaryWindow() -> UsageWindow? {
+        guard let secondary, secondary.windowMinutes == nil else { return nil }
+        return secondary
+    }
 }
 
 public enum UsageMerger {

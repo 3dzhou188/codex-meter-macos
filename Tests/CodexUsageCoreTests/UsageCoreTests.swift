@@ -31,6 +31,28 @@ import Testing
     #expect(snapshot.source == .appServer)
 }
 
+@Test func usageSnapshotIdentifiesWindowsByDuration() throws {
+    let input = """
+    {"rateLimitsByLimitId":{"codex":{"planType":"pro","primary":{"usedPercent":6,"windowDurationMins":300,"resetsAt":1781089333},"secondary":{"usedPercent":21,"windowDurationMins":10080,"resetsAt":1781146054}}}}
+    """
+
+    let snapshot = try AppServerUsageParser.parseResult(Data(input.utf8), receivedAt: Date(timeIntervalSince1970: 1_781_080_000))
+    #expect(snapshot.fiveHourWindow?.remainingPercent == 94)
+    #expect(snapshot.sevenDayWindow?.remainingPercent == 79)
+    #expect(!snapshot.isFiveHourLimitTemporarilyUnlimited)
+}
+
+@Test func weeklyOnlyCodexLimitDoesNotPopulateFiveHourWindow() throws {
+    let input = """
+    {"rateLimitsByLimitId":{"codex":{"planType":"pro","primary":{"usedPercent":21,"windowDurationMins":10080,"resetsAt":1781146054}}}}
+    """
+
+    let snapshot = try AppServerUsageParser.parseResult(Data(input.utf8), receivedAt: Date(timeIntervalSince1970: 1_781_080_000))
+    #expect(snapshot.fiveHourWindow == nil)
+    #expect(snapshot.sevenDayWindow?.remainingPercent == 79)
+    #expect(snapshot.isFiveHourLimitTemporarilyUnlimited)
+}
+
 @Test func realtimeSnapshotStalenessUsesFifteenMinuteThreshold() {
     let snapshot = UsageSnapshot(
         primary: UsageWindow(usedPercent: 20, windowMinutes: 300, resetsAt: nil),

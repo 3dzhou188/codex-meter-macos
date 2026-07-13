@@ -7,9 +7,13 @@ struct UsageMenuView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             if let snapshot = store.snapshot {
-                UsageWindowView(title: "5 小时额度", window: snapshot.primary)
+                UsageWindowView(
+                    title: "5 小时额度",
+                    window: snapshot.fiveHourWindow,
+                    unlimited: snapshot.isFiveHourLimitTemporarilyUnlimited
+                )
                 Divider()
-                UsageWindowView(title: "7 天额度", window: snapshot.secondary)
+                UsageWindowView(title: "7 天额度", window: snapshot.sevenDayWindow)
                 Divider()
                 metadata(snapshot)
             } else {
@@ -183,18 +187,19 @@ private struct AgentStatusSection: View {
 private struct UsageWindowView: View {
     let title: String
     let window: UsageWindow?
+    var unlimited = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack {
                 Text(title).font(.headline)
                 Spacer()
-                Text(window.map { "\($0.remainingPercent)%" } ?? "--")
+                Text(valueText)
                     .font(.title3.bold())
                     .monospacedDigit()
                     .foregroundStyle(color)
             }
-            ProgressView(value: Double(window?.remainingPercent ?? 0), total: 100)
+            ProgressView(value: Double(progressValue), total: 100)
                 .tint(color)
             HStack {
                 Text("剩余")
@@ -207,11 +212,23 @@ private struct UsageWindowView: View {
     }
 
     private var color: Color {
+        if unlimited { return Color(UsageLevel(remainingPercent: 100)) }
         guard let remaining = window?.remainingPercent else { return .secondary }
         return Color(UsageLevel(remainingPercent: remaining))
     }
 
+    private var valueText: String {
+        if unlimited { return "暂无限制" }
+        return window.map { "\($0.remainingPercent)%" } ?? "--"
+    }
+
+    private var progressValue: Int {
+        if unlimited { return 100 }
+        return window?.remainingPercent ?? 0
+    }
+
     private var resetDescription: String {
+        if unlimited { return "Codex 官方暂未限制" }
         guard let reset = window?.resetsAt else { return "重置时间未知" }
         let relative = reset.formatted(.relative(presentation: .numeric))
         let exact = reset.formatted(date: .abbreviated, time: .shortened)

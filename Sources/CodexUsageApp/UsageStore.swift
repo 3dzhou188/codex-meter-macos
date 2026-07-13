@@ -211,8 +211,8 @@ final class UsageStore: ObservableObject {
     }
 
     private func notifyIfNeeded(_ snapshot: UsageSnapshot) {
-        notify(window: snapshot.primary, kind: .primary, name: "5 小时额度")
-        notify(window: snapshot.secondary, kind: .secondary, name: "7 天额度")
+        notify(window: snapshot.fiveHourWindow, kind: .primary, name: "5 小时额度")
+        notify(window: snapshot.sevenDayWindow, kind: .secondary, name: "7 天额度")
     }
 
     private func notify(window: UsageWindow?, kind: UsageWindowKind, name: String) {

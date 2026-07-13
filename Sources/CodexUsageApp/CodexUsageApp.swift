@@ -82,7 +82,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let image = StatusItemImageFactory.make(usage: usage, agent: agent, mode: mode, tick: tick)
         statusItem?.length = image.size.width + 8
         button.image = image
-        let description = "Codex 5 小时：\(usage?.primary?.remainingPercent.description ?? "--")%，7 天：\(usage?.secondary?.remainingPercent.description ?? "--")%，Agent：\(agent.aggregate.displayName)"
+        let fiveHourText = usage.map {
+            $0.isFiveHourLimitTemporarilyUnlimited
+                ? "暂无限制"
+                : "\($0.fiveHourWindow?.remainingPercent.description ?? "--")%"
+        } ?? "--"
+        let sevenDayText = (usage?.sevenDayWindow?.remainingPercent).map { "\($0)%" } ?? "--"
+        let description = "Codex 5 小时：\(fiveHourText)，7 天：\(sevenDayText)，Agent：\(agent.aggregate.displayName)"
         button.toolTip = description
         button.setAccessibilityLabel(description)
     }

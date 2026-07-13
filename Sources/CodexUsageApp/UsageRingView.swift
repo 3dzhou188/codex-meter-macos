@@ -21,12 +21,22 @@ enum StatusItemImageFactory {
         let image = NSImage(size: imageSize, flipped: false) { _ in
             switch mode {
             case .usageAndAgent:
-                drawMeter(label: "5h", percent: usage?.primary?.remainingPercent, originX: 0)
-                drawMeter(label: "7d", percent: usage?.secondary?.remainingPercent, originX: 39)
+                drawMeter(
+                    label: "5h",
+                    percent: usage?.fiveHourWindow?.remainingPercent,
+                    unlimited: usage?.isFiveHourLimitTemporarilyUnlimited == true,
+                    originX: 0
+                )
+                drawMeter(label: "7d", percent: usage?.sevenDayWindow?.remainingPercent, originX: 39)
                 drawAgentLamp(signal: agent.aggregate, originX: 80, tick: tick)
             case .usageOnly:
-                drawMeter(label: "5h", percent: usage?.primary?.remainingPercent, originX: 0)
-                drawMeter(label: "7d", percent: usage?.secondary?.remainingPercent, originX: 39)
+                drawMeter(
+                    label: "5h",
+                    percent: usage?.fiveHourWindow?.remainingPercent,
+                    unlimited: usage?.isFiveHourLimitTemporarilyUnlimited == true,
+                    originX: 0
+                )
+                drawMeter(label: "7d", percent: usage?.sevenDayWindow?.remainingPercent, originX: 39)
             case .agentOnly:
                 drawAgentLamp(signal: agent.aggregate, originX: 3, tick: tick)
             }
@@ -44,19 +54,24 @@ enum StatusItemImageFactory {
         }
     }
 
-    private static func drawMeter(label: String, percent: Int?, originX: CGFloat) {
+    private static func drawMeter(
+        label: String,
+        percent: Int?,
+        unlimited: Bool = false,
+        originX: CGFloat
+    ) {
         let labelAttributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedSystemFont(ofSize: 7.5, weight: .semibold),
+            .font: NSFont.monospacedSystemFont(ofSize: 8.3, weight: .semibold),
             .foregroundColor: NSColor.labelColor,
         ]
-        NSString(string: label).draw(at: NSPoint(x: originX, y: 7), withAttributes: labelAttributes)
+        NSString(string: label).draw(at: NSPoint(x: originX, y: 6.6), withAttributes: labelAttributes)
 
         let center = NSPoint(x: originX + 25.5, y: 11)
         let activeCount = SegmentedRing.activeSegments(
-            remainingPercent: percent,
+            remainingPercent: unlimited ? 100 : percent,
             segmentCount: segmentCount
         )
-        let activeColor = percent.map { NSColor(UsageLevel(remainingPercent: $0)) }
+        let activeColor = NSColor(UsageLevel(remainingPercent: unlimited ? 100 : (percent ?? 0)))
 
         for index in 0..<segmentCount {
             let start = 90 - CGFloat(index) * 360 / CGFloat(segmentCount)
@@ -65,13 +80,13 @@ enum StatusItemImageFactory {
             path.appendArc(withCenter: center, radius: 8.5, startAngle: start, endAngle: end, clockwise: true)
             path.lineWidth = 2.6
             path.lineCapStyle = .butt
-            (index < activeCount ? activeColor : NSColor.secondaryLabelColor.withAlphaComponent(0.25))?.setStroke()
+            (index < activeCount ? activeColor : NSColor.secondaryLabelColor.withAlphaComponent(0.25)).setStroke()
             path.stroke()
         }
 
-        let number = percent.map(String.init) ?? "--"
+        let number = unlimited ? "∞" : (percent.map(String.init) ?? "--")
         let numberAttributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedDigitSystemFont(ofSize: 5.8, weight: .bold),
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 6.6, weight: .bold),
             .foregroundColor: NSColor.labelColor,
         ]
         let textSize = NSString(string: number).size(withAttributes: numberAttributes)
