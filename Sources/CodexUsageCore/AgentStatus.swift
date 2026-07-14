@@ -127,7 +127,7 @@ public enum AgentSignal: String, Codable, CaseIterable, Sendable {
         case .attention: "需要查看"
         case .permissionRequest: "等待授权"
         case .blocked: "阻塞/失败"
-        case .stale: "状态不可信"
+        case .stale: "状态不可用"
         case .paused: "已暂停"
         }
     }
@@ -142,7 +142,7 @@ public enum AgentSignal: String, Codable, CaseIterable, Sendable {
         case .attention: "Codex 需要你查看或继续。"
         case .permissionRequest: "Codex 正在等待授权。"
         case .blocked: "Codex 遇到失败、阻塞或无法继续。"
-        case .stale: "状态文件过期、损坏，或当前状态不可信。"
+        case .stale: "Agent 状态数据暂时无法读取。"
         case .paused: "Codex Agent 状态监控已暂停。"
         }
     }
@@ -242,10 +242,14 @@ public enum AgentLampIntensity {
             return color == .green ? fastBlink : 0
         case .working, .toolDone:
             return color == .green ? slowBlink : 0
-        case .attention, .stale:
+        case .attention:
             return color == .yellow ? slowBlink : 0
-        case .permissionRequest, .blocked:
+        case .stale:
+            return color == .yellow ? 1.0 : 0
+        case .permissionRequest:
             return color == .red ? fastBlink : 0
+        case .blocked:
+            return color == .red ? 1.0 : 0
         case .paused:
             return 0
         }

@@ -54,6 +54,12 @@ import Testing
     ))
     #expect(failure.signal == .blocked)
 
+    let inspectedFailureData = try #require(try parser.parseLine(
+        #"{"timestamp":"2026-06-18T12:00:07Z","type":"response_item","payload":{"type":"function_call_output","output":{"error":"example data","success":false}}}"#,
+        fileURL: file
+    ))
+    #expect(inspectedFailureData.signal == .toolDone)
+
     let taskStarted = try #require(try parser.parseLine(
         #"{"timestamp":"2026-06-18T12:00:08Z","type":"event_msg","payload":{"type":"task_started"}}"#,
         fileURL: file
@@ -84,6 +90,14 @@ import Testing
     #expect(prompt.sessionID == "env-session")
     #expect(prompt.agent == "env-agent")
 
+    let toolStart = try adapter.activity(
+        eventName: "PreToolUse",
+        payload: ["status": "completed", "input": ["error": "example data"]],
+        environment: env,
+        now: Date(timeIntervalSince1970: 10.5)
+    )
+    #expect(toolStart.signal == .working)
+
     let permission = try adapter.activity(
         eventName: "PermissionRequest",
         payload: ["session_id": "payload-session", "tool": "write"],
@@ -103,7 +117,7 @@ import Testing
     #expect(failedStop.agent == "codex-cli")
 }
 
-@Test func agentStatusStorePreservesImportantStatesAndPrunesTTL() throws {
+@Test func agentStatusStorePreservesImportantStatesAndExpiresOldSessions() throws {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     let file = directory.appendingPathComponent("agent-status.json")
     let store = AgentStatusStore(stateFileURL: file, sessionTTL: 60, completedTTL: 30)
@@ -131,13 +145,13 @@ import Testing
 
     try store.apply(AgentActivity(sessionID: "s3", signal: .working, updatedAt: base.addingTimeInterval(80), agent: "codex"))
     snapshot = try store.readSnapshot(now: base.addingTimeInterval(200))
-    #expect(snapshot.aggregate == .stale)
-    #expect(snapshot.sessions.first?.signal == .stale)
+    #expect(snapshot.aggregate == .idle)
+    #expect(snapshot.sessions.isEmpty)
 
     try store.apply(AgentActivity(sessionID: "s4", signal: .blocked, updatedAt: base.addingTimeInterval(210), agent: "codex"))
     snapshot = try store.readSnapshot(now: base.addingTimeInterval(300))
-    #expect(snapshot.aggregate == .stale)
-    #expect(snapshot.sessions.first { $0.sessionID == "s4" }?.signal == .stale)
+    #expect(snapshot.aggregate == .idle)
+    #expect(snapshot.sessions.isEmpty)
 }
 
 @Test func agentLampIntensityMatchesSignalColors() {
@@ -147,6 +161,10 @@ import Testing
     #expect(AgentLampIntensity.value(color: .yellow, signal: .attention, tick: 1) < 1.0)
     #expect(AgentLampIntensity.value(color: .red, signal: .permissionRequest, tick: 0) == 1.0)
     #expect(AgentLampIntensity.value(color: .red, signal: .permissionRequest, tick: 1) < 0.1)
+    #expect(AgentLampIntensity.value(color: .red, signal: .blocked, tick: 0) == 1.0)
+    #expect(AgentLampIntensity.value(color: .red, signal: .blocked, tick: 1) == 1.0)
+    #expect(AgentLampIntensity.value(color: .yellow, signal: .stale, tick: 0) == 1.0)
+    #expect(AgentLampIntensity.value(color: .yellow, signal: .stale, tick: 1) == 1.0)
     #expect(AgentLampIntensity.value(color: .green, signal: .paused, tick: 0) == 0)
 }
 
@@ -168,17 +186,18 @@ import Testing
     #expect(activeColors(for: .paused).isEmpty)
 }
 
-@Test func corruptedAgentStateFileReadsAsStale() throws {
+@Test func corruptedAgentStateCacheRecoversAsIdle() throws {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     let file = directory.appendingPathComponent("agent-status.json")
     try Data("not-json".utf8).write(to: file)
 
     let snapshot = try AgentStatusStore(stateFileURL: file).readSnapshot()
-    #expect(snapshot.aggregate == .stale)
+    #expect(snapshot.aggregate == .idle)
+    #expect(snapshot.sessions.isEmpty)
 }
 
-@Test func agentStatusClearsPermissionAfterExplicitProgressButKeepsBlocked() throws {
+@Test func agentStatusClearsPermissionAndBlockedAfterExplicitProgress() throws {
     let file = FileManager.default.temporaryDirectory
         .appendingPathComponent(UUID().uuidString)
         .appendingPathComponent("agent-status.json")
@@ -194,10 +213,12 @@ import Testing
 
     try store.apply(AgentActivity(sessionID: "s2", signal: .blocked, updatedAt: base.addingTimeInterval(5), agent: "codex"))
     try store.apply(AgentActivity(sessionID: "s2", signal: .done, updatedAt: base.addingTimeInterval(6), agent: "codex"))
-    #expect(try store.readSnapshot(now: base.addingTimeInterval(7)).aggregate == .blocked)
+    let snapshot = try store.readSnapshot(now: base.addingTimeInterval(7))
+    #expect(snapshot.aggregate == .toolDone)
+    #expect(snapshot.sessions.first { $0.sessionID == "s2" }?.signal == .done)
 }
 
-@Test func staleSessionDoesNotOverrideFreshActivity() throws {
+@Test func expiredSessionDoesNotOverrideFreshActivity() throws {
     let file = FileManager.default.temporaryDirectory
         .appendingPathComponent(UUID().uuidString)
         .appendingPathComponent("agent-status.json")
@@ -206,14 +227,14 @@ import Testing
 
     try store.apply(AgentActivity(sessionID: "old", signal: .working, updatedAt: base, agent: "codex"))
     var snapshot = try store.readSnapshot(now: base.addingTimeInterval(90))
-    #expect(snapshot.aggregate == .stale)
+    #expect(snapshot.aggregate == .idle)
 
     try store.apply(AgentActivity(sessionID: "fresh", signal: .toolDone, updatedAt: base.addingTimeInterval(91), agent: "codex"))
     snapshot = try store.readSnapshot(now: base.addingTimeInterval(92))
     #expect(snapshot.aggregate == .toolDone)
 }
 
-@Test func staleSessionAcceptsNewerActivityForSameSession() throws {
+@Test func expiredSessionAcceptsNewerActivityForSameSession() throws {
     let file = FileManager.default.temporaryDirectory
         .appendingPathComponent(UUID().uuidString)
         .appendingPathComponent("agent-status.json")
@@ -222,10 +243,50 @@ import Testing
 
     try store.apply(AgentActivity(sessionID: "same", signal: .working, updatedAt: base, agent: "codex"))
     var snapshot = try store.readSnapshot(now: base.addingTimeInterval(90))
-    #expect(snapshot.aggregate == .stale)
+    #expect(snapshot.aggregate == .idle)
 
     try store.apply(AgentActivity(sessionID: "same", signal: .thinking, updatedAt: base.addingTimeInterval(91), agent: "codex"))
     snapshot = try store.readSnapshot(now: base.addingTimeInterval(92))
     #expect(snapshot.aggregate == .thinking)
     #expect(snapshot.sessions.first?.signal == .thinking)
+}
+
+@Test func agentStatusStoreIgnoresDuplicateActivities() throws {
+    let file = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString)
+        .appendingPathComponent("agent-status.json")
+    let store = AgentStatusStore(stateFileURL: file)
+    let activity = AgentActivity(
+        sessionID: "same",
+        signal: .working,
+        updatedAt: Date(timeIntervalSince1970: 5_000),
+        agent: "codex",
+        event: "tool"
+    )
+
+    try store.apply(activity)
+    try store.apply(activity)
+
+    let snapshot = try store.readSnapshot(now: Date(timeIntervalSince1970: 5_001))
+    #expect(snapshot.recentEvents.count == 1)
+}
+
+@Test func desktopActivityProviderOnlyReturnsCurrentActivityWindow() throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let file = directory.appendingPathComponent("session.jsonl")
+    let contents = [
+        #"{"timestamp":"1970-01-01T01:06:40Z","type":"event_msg","payload":{"type":"task_started"}}"#,
+        #"{"timestamp":"1970-01-01T01:23:10Z","type":"event_msg","payload":{"type":"task_started"}}"#,
+    ].joined(separator: "\n")
+    try Data(contents.utf8).write(to: file)
+
+    let provider = CodexDesktopActivityProvider(
+        sessionsDirectory: directory,
+        activityLookback: 60
+    )
+    let activities = provider.recentActivities(now: Date(timeIntervalSince1970: 5_000))
+
+    #expect(activities.count == 1)
+    #expect(activities.first?.updatedAt == Date(timeIntervalSince1970: 4_990))
 }

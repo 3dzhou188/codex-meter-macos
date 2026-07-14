@@ -4,20 +4,42 @@
 
 > An unofficial, native macOS menu bar app for monitoring Codex usage limits and Codex Agent activity.
 
-![Codex Meter usage quota and Agent status overview](docs/codex-meter-overview.png)
+<p align="center">
+  <img src="xiaohongshu/images/01-cover.png" alt="Codex Meter 剩余用量和 Agent 状态总览" width="560">
+</p>
+
+[额度圆环与 Agent 状态灯显示规则](docs/DISPLAY_RULES.md)
 
 ## 中文
 
 Codex Meter 是一款轻量的原生 macOS 菜单栏应用，用两个彩色分段圆环实时显示 Codex **5 小时额度**和 **7 天额度**的剩余百分比，并用三色状态灯展示 Codex Agent 当前活动状态。
 
-示意图展示了额度圆环的颜色阈值，以及 Codex Agent 在空闲、思考、工作、需查看、等待授权、阻塞和状态不可信等场景下的红绿灯状态。
+下方图文展示了产品用途、额度圆环颜色阈值、16 段顺时针绘制规则，以及 Codex Agent 在空闲、思考、工作、需查看、等待授权、阻塞和状态不可用等场景下的灯语。
+
+### 图文介绍
+
+<p align="center">
+  <img src="xiaohongshu/images/02-pain-point.png" alt="Codex Meter 解决的用量和 Agent 状态查看痛点" width="49%">
+  <img src="xiaohongshu/images/03-result.png" alt="Codex Meter 产品功能介绍" width="49%">
+</p>
+<p align="center">
+  <img src="xiaohongshu/images/04-colors.png" alt="Codex Meter 剩余用量颜色阈值" width="49%">
+  <img src="xiaohongshu/images/05-features.png" alt="Codex Meter 16 段圆环绘制规则" width="49%">
+</p>
+<p align="center">
+  <img src="xiaohongshu/images/06-install.png" alt="Codex Meter Agent 绿灯状态规则" width="49%">
+  <img src="xiaohongshu/images/07-download.png" alt="Codex Meter Agent 黄灯红灯和暂停规则" width="49%">
+</p>
+<p align="center">
+  <img src="xiaohongshu/images/08-download.png" alt="Codex Meter 开源、隐私和下载信息" width="49%">
+</p>
 
 ### 功能
 
 - 菜单栏同时显示 5 小时和 7 天剩余额度
 - 按剩余比例自动变色：绿色、浅绿、黄色、橙色、红色
 - 展示额度重置时间、套餐类型和数据更新时间
-- 显示 Codex Agent 状态灯：空闲、思考中、工作中、完成、需查看、等待授权、阻塞、过期或暂停
+- 显示 Codex Agent 状态灯：空闲、思考中、工作中、完成、需查看、等待授权、阻塞、状态不可用或暂停
 - 状态栏显示模式可切换：额度 + Agent、仅额度、仅 Agent
 - 额度低于阈值时发送 macOS 通知
 - 支持开机自动启动和手动刷新
@@ -95,14 +117,14 @@ Codex Agent 状态灯功能参考并受启发于 [Agent Signal Bar](https://gith
 
 Codex Meter is a lightweight native macOS menu bar app that displays the remaining percentage of your Codex **5-hour** and **7-day** usage windows with two segmented, color-coded rings, plus a traffic-light status indicator for Codex Agent activity.
 
-The overview image shows the quota-ring color thresholds and the Codex Agent traffic-light states for ready, thinking, working, attention, permission, blocked, and stale activity.
+The overview image shows the quota-ring color thresholds and the Codex Agent traffic-light states for ready, thinking, working, attention, permission, blocked, and unavailable activity.
 
 ### Features
 
 - Shows both 5-hour and 7-day remaining usage in the menu bar
 - Changes color automatically from green to red as usage runs low
 - Displays reset times, plan type, data source, and last update time
-- Shows Codex Agent activity: idle, thinking, working, done, attention, permission, blocked, stale, or paused
+- Shows Codex Agent activity: idle, thinking, working, done, attention, permission, blocked, unavailable, or paused
 - Supports menu bar display modes: usage + Agent, usage only, or Agent only
 - Sends macOS notifications when remaining usage crosses thresholds
 - Supports launch at login and manual refresh

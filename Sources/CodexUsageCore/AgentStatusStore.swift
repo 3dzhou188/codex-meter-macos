@@ -119,12 +119,27 @@ public final class AgentStatusStore: @unchecked Sendable {
             var document = try loadDocumentIfPresent() ?? emptyDocument(now: activity.updatedAt)
             document = pruned(document, now: activity.updatedAt)
 
+            if document.events.contains(where: {
+                $0.sessionID == activity.sessionID
+                    && $0.signal == activity.signal
+                    && $0.updatedAt == activity.updatedAt
+                    && $0.event == activity.event
+            }) {
+                return
+            }
+
+            var didApply = false
+
             if activity.signal == .paused {
                 document.sessions.removeAll()
                 document.aggregate = .paused
+                didApply = true
             } else if activity.signal == .idle {
-                document.sessions.removeValue(forKey: activity.sessionID)
-                document.aggregate = aggregateSignal(for: Array(document.sessions.values))
+                if let existing = document.sessions[activity.sessionID], activity.updatedAt >= existing.updatedAt {
+                    document.sessions.removeValue(forKey: activity.sessionID)
+                    document.aggregate = aggregateSignal(for: Array(document.sessions.values))
+                    didApply = true
+                }
             } else {
                 let incomingRecord = AgentSessionRecord(
                     sessionID: activity.sessionID,
@@ -135,11 +150,13 @@ public final class AgentStatusStore: @unchecked Sendable {
                 )
                 if shouldAccept(incoming: incomingRecord, existing: document.sessions[activity.sessionID]) {
                     document.sessions[activity.sessionID] = incomingRecord
+                    didApply = true
                 }
                 document.aggregate = aggregateSignal(for: Array(document.sessions.values))
             }
 
-            document.updatedAt = activity.updatedAt
+            guard didApply else { return }
+            document.updatedAt = max(document.updatedAt, activity.updatedAt)
             document.events.insert(
                 AgentEventRecord(
                     id: UUID().uuidString,
@@ -168,9 +185,18 @@ public final class AgentStatusStore: @unchecked Sendable {
         guard let existing else { return true }
         if incoming.updatedAt < existing.updatedAt { return false }
 
-        if existing.signal.displayState == .blocked || existing.signal.displayState == .paused {
-            return incoming.signal.displayState == existing.signal.displayState
-                || incoming.signal.displayState.priority > existing.signal.displayState.priority
+        if existing.signal.displayState == .paused {
+            return incoming.signal.displayState == .paused
+        }
+
+        if existing.signal.displayState == .blocked {
+            return incoming.signal == .thinking
+                || incoming.signal == .working
+                || incoming.signal == .toolDone
+                || incoming.signal == .done
+                || incoming.signal.displayState == .blocked
+                || incoming.signal.displayState == .permission
+                || incoming.signal.displayState == .paused
         }
 
         if existing.signal.displayState == .permission {
@@ -195,20 +221,21 @@ public final class AgentStatusStore: @unchecked Sendable {
         var copy = document
         copy.sessions = Dictionary(uniqueKeysWithValues: document.sessions.compactMap { key, record in
             let age = now.timeIntervalSince(record.updatedAt)
+            if record.signal == .stale {
+                return nil
+            }
             if record.signal == .done, age > completedTTL {
                 return nil
             }
             if record.signal != .paused, age > sessionTTL {
-                var stale = record
-                stale.signal = .stale
-                return (key, stale)
+                return nil
             }
             if record.signal == .idle {
                 return nil
             }
             return (key, record)
         })
-        if copy.aggregate == .paused || (copy.aggregate == .stale && copy.sessions.isEmpty) {
+        if copy.aggregate == .paused {
             return copy
         } else {
             copy.aggregate = aggregateSignal(for: Array(copy.sessions.values))
@@ -267,10 +294,10 @@ public final class AgentStatusStore: @unchecked Sendable {
 
     private func loadDocumentIfPresent() throws -> AgentStatusDocument? {
         guard fileManager.fileExists(atPath: stateFileURL.path) else { return nil }
+        let data = try Data(contentsOf: stateFileURL)
         do {
-            let data = try Data(contentsOf: stateFileURL)
             return try Self.decoder.decode(AgentStatusDocument.self, from: data)
-        } catch {
+        } catch is DecodingError {
             return AgentStatusDocument(schemaVersion: 1, aggregate: .stale, updatedAt: Date(), sessions: [:], events: [])
         }
     }

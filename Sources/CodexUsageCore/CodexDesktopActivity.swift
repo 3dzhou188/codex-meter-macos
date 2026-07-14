@@ -44,7 +44,7 @@ public final class CodexDesktopSessionParser: Sendable {
         topLevelType: String?,
         payloadType: String?
     ) -> AgentSignal? {
-        if containsFailureMarker(object) || containsFailureMarker(payload) {
+        if containsExplicitFailureMarker(object) || containsExplicitFailureMarker(payload) {
             return .blocked
         }
 
@@ -113,17 +113,20 @@ public struct CodexDesktopActivityProvider: Sendable {
     public let sessionsDirectory: URL
     public let maxFiles: Int
     public let tailBytes: Int
+    public let activityLookback: TimeInterval
     public let parser: CodexDesktopSessionParser
 
     public init(
         sessionsDirectory: URL = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".codex/sessions"),
         maxFiles: Int = 20,
         tailBytes: Int = 128 * 1024,
+        activityLookback: TimeInterval = 30 * 60,
         parser: CodexDesktopSessionParser = CodexDesktopSessionParser()
     ) {
         self.sessionsDirectory = sessionsDirectory
         self.maxFiles = maxFiles
         self.tailBytes = tailBytes
+        self.activityLookback = activityLookback
         self.parser = parser
     }
 
@@ -143,10 +146,13 @@ public struct CodexDesktopActivityProvider: Sendable {
             files.append((url, values?.contentModificationDate ?? .distantPast))
         }
 
+        let cutoff = now.addingTimeInterval(-activityLookback)
         return files
+            .filter { $0.modifiedAt >= cutoff }
             .sorted { $0.modifiedAt > $1.modifiedAt }
             .prefix(maxFiles)
             .flatMap { readActivities(fileURL: $0.url, now: now) }
+            .filter { $0.updatedAt >= cutoff && $0.updatedAt <= now.addingTimeInterval(5 * 60) }
             .sorted { $0.updatedAt < $1.updatedAt }
     }
 
@@ -187,14 +193,11 @@ public struct CodexHookAdapter: Sendable {
     }
 
     public func chooseSignal(eventName: String?, payload: [String: Any]) -> AgentSignal {
-        if containsFailureMarker(payload) {
+        if containsExplicitFailureMarker(payload) {
             return .blocked
         }
-        if let explicit = firstValue(for: ["signal", "status", "state"], in: [payload]),
+        if let explicit = payload["signal"],
            let normalized = AgentSignal.normalized(String(describing: explicit)) {
-            return normalized
-        }
-        if let eventName, let normalized = AgentSignal.normalized(eventName) {
             return normalized
         }
         switch normalizeEventName(eventName ?? stringValue(payload["event"]) ?? stringValue(payload["hook_event_name"]) ?? "") {
@@ -211,8 +214,16 @@ public struct CodexHookAdapter: Sendable {
         case "stop":
             return .done
         default:
-            return .attention
+            break
         }
+        if let eventName, let normalized = AgentSignal.normalized(eventName) {
+            return normalized
+        }
+        if let fallback = firstValue(for: ["status", "state"], in: [payload]),
+           let normalized = AgentSignal.normalized(String(describing: fallback)) {
+            return normalized
+        }
+        return .attention
     }
 
     public func sessionID(payload: [String: Any], environment: [String: String]) -> String {
@@ -278,7 +289,7 @@ private func date(from value: Any?) -> Date? {
     return fractional.date(from: string) ?? plain.date(from: string)
 }
 
-private func containsFailureMarker(_ dictionary: [String: Any]) -> Bool {
+private func containsExplicitFailureMarker(_ dictionary: [String: Any]) -> Bool {
     for (key, value) in dictionary {
         let normalizedKey = normalizeEventName(key)
         if ["error", "failure", "exception"].contains(normalizedKey) {
@@ -303,9 +314,6 @@ private func containsFailureMarker(_ dictionary: [String: Any]) -> Bool {
             if let text = stringValue(value), text != "0" {
                 return true
             }
-        }
-        if let nested = value as? [String: Any], containsFailureMarker(nested) {
-            return true
         }
     }
     return false

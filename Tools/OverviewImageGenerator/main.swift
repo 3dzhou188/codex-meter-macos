@@ -357,7 +357,7 @@ let image = NSImage(size: canvasSize, flipped: false) { _ in
         (.working, "Working / 工作中"),
         (.done, "Done / 已完成"),
         (.attention, "Attention / 需要查看"),
-        (.stale, "Stale / 状态不可信"),
+        (.stale, "Unavailable / 状态不可用"),
         (.permission, "Permission / 等待授权"),
         (.blocked, "Blocked / 阻塞/失败"),
         (.paused, "Paused / 已暂停"),

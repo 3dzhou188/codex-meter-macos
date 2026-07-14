@@ -175,14 +175,13 @@ final class UsageStore: ObservableObject {
         }.value
 
         do {
+            let currentActivityKeys = Set(activities.map(activityKey))
+            appliedDesktopActivityKeys.formIntersection(currentActivityKeys)
             for activity in activities {
-                let key = "\(activity.sessionID)|\(activity.updatedAt.timeIntervalSince1970)|\(activity.signal.rawValue)|\(activity.event ?? "")"
+                let key = activityKey(activity)
                 guard !appliedDesktopActivityKeys.contains(key) else { continue }
                 try agentStateStore.apply(activity)
                 appliedDesktopActivityKeys.insert(key)
-            }
-            if appliedDesktopActivityKeys.count > 1_000 {
-                appliedDesktopActivityKeys.removeAll(keepingCapacity: true)
             }
             agentSnapshot = try agentStateStore.readSnapshot()
         } catch {
@@ -195,6 +194,10 @@ final class UsageStore: ObservableObject {
             )
             errorMessage = "Agent 状态读取失败：\(error.localizedDescription)"
         }
+    }
+
+    private func activityKey(_ activity: AgentActivity) -> String {
+        "\(activity.sessionID)|\(activity.updatedAt.timeIntervalSince1970)|\(activity.signal.rawValue)|\(activity.event ?? "")"
     }
 
     private func advanceAgentAnimation() {
