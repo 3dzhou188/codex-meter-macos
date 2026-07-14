@@ -9,7 +9,7 @@ on:
       tag:
         description: Existing version tag to publish
         required: true
-        default: v3.0.0
+        default: v3.1.0
 
 permissions:
   contents: write
@@ -37,7 +37,11 @@ jobs:
           cat > /tmp/release-notes.md <<'NOTES'
           ## 中文
 
-          Codex Meter 3.0.0 兼容新版 ChatGPT 桌面应用。OpenAI 将 Codex 桌面应用整合并更名为 ChatGPT 后，本版本可从 `/Applications/ChatGPT.app` 自动发现内置 Codex 实时服务，同时继续兼容旧版 Codex.app 和 Homebrew Codex CLI。
+          Codex Meter 3.1.0 修复 Codex 官方暂时取消 5 小时用量限制后出现的显示 bug。当前只返回 1 周用量时，App 会将 5 小时额度显示为“暂无限制”，同时继续准确显示真实的 7 天额度；官方恢复两档限制后也会自动恢复正常测量显示。
+
+          本版本同时修复 Agent 状态灯经常显示“状态不可信”的问题，校正会话过期、失败判断和红黄绿状态转换逻辑。
+
+          本版本兼容新版 ChatGPT 桌面应用。OpenAI 将 Codex 桌面应用整合并更名为 ChatGPT 后，App 可从 `/Applications/ChatGPT.app` 自动发现内置 Codex 实时服务，同时继续兼容旧版 Codex.app 和 Homebrew Codex CLI。
 
           “打开 Codex”操作也会优先打开 ChatGPT，并在未安装新版应用时回退到旧版 Codex。
 
@@ -58,7 +62,11 @@ jobs:
 
           ## English
 
-          Codex Meter 3.0.0 supports the renamed ChatGPT desktop app. After OpenAI integrated the Codex desktop experience into ChatGPT, this release can discover the bundled Codex realtime service at `/Applications/ChatGPT.app`, while retaining compatibility with the legacy Codex.app and Homebrew Codex CLI installations.
+          Codex Meter 3.1.0 fixes the usage display bug caused by Codex temporarily removing the five-hour limit. When Codex returns only the weekly window, the app shows the five-hour module as “No limit” while continuing to display the real seven-day usage; normal two-window measurement resumes automatically when the official five-hour limit returns.
+
+          This release also fixes false “Status unavailable” Agent light states by correcting session expiry handling, failure detection, and red/yellow/green state transitions.
+
+          The release supports the renamed ChatGPT desktop app. After OpenAI integrated the Codex desktop experience into ChatGPT, this release can discover the bundled Codex realtime service at `/Applications/ChatGPT.app`, while retaining compatibility with the legacy Codex.app and Homebrew Codex CLI installations.
 
           The “Open Codex” action now opens ChatGPT first and falls back to the legacy Codex app when needed.
 
